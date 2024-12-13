@@ -1,89 +1,98 @@
 package com.example.firebasetest
 
+import android.content.Intent
 import android.os.Bundle
-import android.widget.*
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.firebasetest.adapter.HealthRecordAdapter
+import com.example.firebasetest.data.AppDatabase
+import com.example.firebasetest.data.HealthRecord
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
-
-
     private val db = FirebaseFirestore.getInstance()
+    private lateinit var etWeight: EditText
+    private lateinit var etBloodPressure: EditText
+    private lateinit var etNotes: EditText
+    private lateinit var btnSave: Button
+    private lateinit var rvHealthRecords: RecyclerView
+    private lateinit var btnUploadDownload: Button
 
+    private lateinit var healthRecordAdapter: HealthRecordAdapter
+    private val healthRecords = mutableListOf<HealthRecord>()
 
-    private var dataProvinsi = ArrayList<Map<String, String>>()
-    private lateinit var lvAdapter: SimpleAdapter
-    private lateinit var etProvinsi: EditText
-    private lateinit var etIbukota: EditText
-    private lateinit var btnSimpan: Button
-    private lateinit var lvData: ListView
+    private val database by lazy { AppDatabase.getDatabase(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        etWeight = findViewById(R.id.etWeight)
+        etBloodPressure = findViewById(R.id.etBloodPressure)
+        etNotes = findViewById(R.id.etNotes)
+        btnSave = findViewById(R.id.btnSave)
+        rvHealthRecords = findViewById(R.id.rvHealthRecords)
+        btnUploadDownload = findViewById(R.id.btnUploadDownload)
 
-        etProvinsi = findViewById(R.id.etProvinsi)
-        etIbukota = findViewById(R.id.etIbukota)
-        btnSimpan = findViewById(R.id.btnSimpan)
-        lvData = findViewById(R.id.lvData)
+        healthRecordAdapter = HealthRecordAdapter(healthRecords)
+        rvHealthRecords.adapter = healthRecordAdapter
+        rvHealthRecords.layoutManager = LinearLayoutManager(this)
 
-
-        lvAdapter = SimpleAdapter(
-            this,
-            dataProvinsi,
-            android.R.layout.simple_list_item_2,
-            arrayOf("Provinsi", "Ibukota"),
-            intArrayOf(android.R.id.text1, android.R.id.text2)
-        )
-        lvData.adapter = lvAdapter
-
-
-        btnSimpan.setOnClickListener {
-            val provinsi = etProvinsi.text.toString()
-            val ibukota = etIbukota.text.toString()
-            if (provinsi.isNotEmpty() && ibukota.isNotEmpty()) {
-                tambahData(provinsi, ibukota)
-            } else {
-                Toast.makeText(this, "Field tidak boleh kosong", Toast.LENGTH_SHORT).show()
-            }
+        btnSave.setOnClickListener {
+            saveHealthRecord()
         }
 
+        btnUploadDownload.setOnClickListener {
+            startActivity(Intent(this, UploadDownloadActivity::class.java))
+        }
 
-        readData()
+        loadHealthRecords()
     }
 
+    private fun saveHealthRecord() {
+        val weight = etWeight.text.toString().toDoubleOrNull()
+        val bloodPressure = etBloodPressure.text.toString()
+        val notes = etNotes.text.toString()
 
-    private fun tambahData(provinsi: String, ibukota: String) {
-        val dataBaru = mapOf("Provinsi" to provinsi, "Ibukota" to ibukota)
-        db.collection("tbProvinsi")
-            .add(dataBaru)
-            .addOnSuccessListener {
-                etProvinsi.text.clear()
-                etIbukota.text.clear()
-                Toast.makeText(this, "Data berhasil disimpan", Toast.LENGTH_SHORT).show()
-                readData() // Refresh data
+        if (weight != null && bloodPressure.isNotEmpty() && notes.isNotEmpty()) {
+            val healthRecord = HealthRecord(
+                dateTime = Date(),
+                weight = weight,
+                bloodPressure = bloodPressure,
+                notes = notes
+            )
+
+            CoroutineScope(Dispatchers.IO).launch {
+                database.healthRecordDao().insert(healthRecord)
+                loadHealthRecords()
             }
-            .addOnFailureListener {
-                Toast.makeText(this, "Gagal menyimpan data: ${it.message}", Toast.LENGTH_SHORT).show()
-            }
+
+            etWeight.text.clear()
+            etBloodPressure.text.clear()
+            etNotes.text.clear()
+
+            Toast.makeText(this, "Data berhasil disimpan", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Field tidak boleh kosong", Toast.LENGTH_SHORT).show()
+        }
     }
 
-
-    private fun readData() {
-        db.collection("tbProvinsi")
-            .get()
-            .addOnSuccessListener { result ->
-                dataProvinsi.clear()
-                for (document in result) {
-                    val provinsi = document.getString("Provinsi").orEmpty()
-                    val ibukota = document.getString("Ibukota").orEmpty()
-                    dataProvinsi.add(mapOf("Provinsi" to provinsi, "Ibukota" to ibukota))
-                }
-                lvAdapter.notifyDataSetChanged()
+    private fun loadHealthRecords() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val records = database.healthRecordDao().getAll() // Fetch records from database
+            runOnUiThread {
+                healthRecords.clear()
+                healthRecords.addAll(records)
+                healthRecordAdapter.notifyDataSetChanged() // Update RecyclerView
             }
-            .addOnFailureListener {
-                Toast.makeText(this, "Gagal mengambil data: ${it.message}", Toast.LENGTH_SHORT).show()
-            }
+        }
     }
 }

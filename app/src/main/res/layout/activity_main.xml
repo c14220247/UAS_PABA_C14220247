@@ -1,30 +1,45 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp">
 
     <EditText
-        android:id="@+id/etProvinsi"
+        android:id="@+id/etWeight"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Masukkan Nama Provinsi" />
+        android:hint="Berat Badan (kg)"
+        android:inputType="numberDecimal" />
 
     <EditText
-        android:id="@+id/etIbukota"
+        android:id="@+id/etBloodPressure"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Masukkan Nama Ibukota" />
+        android:hint="Tekanan Darah (mmHg)" />
+
+    <EditText
+        android:id="@+id/etNotes"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Catatan" />
 
     <Button
-        android:id="@+id/btnSimpan"
+        android:id="@+id/btnSave"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Simpan Data" />
+        android:text="Simpan" />
 
-    <ListView
-        android:id="@+id/lvData"
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvHealthRecords"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <Button
+        android:id="@+id/btnUploadDownload"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Upload/Download" />
+
 </LinearLayout>
